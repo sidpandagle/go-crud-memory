@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -13,13 +14,24 @@ var nextId int = 1
 
 func main() {
 
+	// Adding a flag
+
+	addr := flag.String("addr", ":8000", "HTTP Network Address")
+	flag.Parse()
+
 	http.HandleFunc("/", home)
-	http.HandleFunc("/user/update", updateUser)
-	http.HandleFunc("/user/delete", deleteUser)
+	http.HandleFunc("/users/update", updateUser)
+	http.HandleFunc("/users/delete", deleteUser)
 	http.HandleFunc("/user", getUser)
 	http.HandleFunc("/users", getUsers)
-	http.HandleFunc("/user/create", createUser)
-	err := http.ListenAndServe(":8000", nil)
+	http.HandleFunc("/users/create", createUser)
+	http.HandleFunc("/download", downloadHandler)
+
+	fileServer := http.FileServer(http.Dir("./"))
+	http.Handle("/static/", http.StripPrefix("/static/", fileServer))
+
+	log.Println("Server starting on", *addr)
+	err := http.ListenAndServe(*addr, nil)
 	log.Fatal(err)
 }
 
@@ -113,13 +125,17 @@ func updateUser(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func downloadHandler(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "./test.png")
+}
+
 type User struct {
 	Id   int    `json:"id"`
 	Name string `json:"name"`
 }
 
 // // // Create User
-// curl -X POST http://localhost:8000/user/create ^
+// curl -X POST http://localhost:8000/users/create ^
 // -H "Content-Type: application/json" ^
 // -d "{\"name\": \"John Doe\"}"
 
@@ -127,10 +143,10 @@ type User struct {
 // curl -X GET http://localhost:8000/users
 
 // // // Get User by ID
-// curl -X GET http://localhost:8000/users/{id}
+// curl -X GET http://localhost:8000/user/{id}
 
 // // // Update User
-// curl -X PUT http://localhost:8000/user/update?id=1 ^
+// curl -X PUT http://localhost:8000/users/update?id=1 ^
 // -H "Content-Type: application/json" ^
 // -d "{\"name\": \"Jane Doe\"}"
 
